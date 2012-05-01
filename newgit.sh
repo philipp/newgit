@@ -10,8 +10,10 @@
 # it will set up a bare git repo of the same folder name (with ".git" appended) at whatever "$remotebase" is
 
 # the hostname on which to put the repo
+# honors "REMOTE_GIT_SYSTEM" environment variable
 #remoteSystem='example.com'
 # the account to which you have SSH access
+# honors "REMOTE_GIT_USER" environment variable
 #remoteAccount='example'
 
 # the directory in which all the repos live
@@ -21,7 +23,7 @@ remoteDir='git' # in this case, just "git/" in the login account's home dir
 #### Don't change anything past here
 ####
 
-gitignoreBase="https://raw.github.com/github/gitignore/master/"
+gitignoreBase="https://raw.github.com/github/gitignore/master"
 
 while getopts "ign:s:d:u:p:T:t:" flag
 do
@@ -43,8 +45,12 @@ done
 shift $((OPTIND-1))
 
 if [ "$remoteSystem" == "" -a "$useGithub" != "true" ]; then
-		echo "Need either a remote system ( -s ) or to be told to use GitHub ( -g ).  Quitting."
-		exit 99
+		if [ "$REMOTE_GIT_SYSTEM" != "" ]; then
+				remoteSystem="$REMOTE_GIT_SYSTEM"
+		else
+				echo "Need either a remote system ( -s ) or to be told to use GitHub ( -g ).  Quitting."
+				exit 99
+		fi
 fi
 
 if [ "$remoteAccount" == "" -a "$useGithub" == "true" ]; then
@@ -61,8 +67,12 @@ if [ "$remoteAccount" == "" -a "$useGithub" == "true" ]; then
 fi
 # okay, I've tried everything that makes sense to me right now		
 if [ "$remoteAccount" == "" ]; then
-		echo "Can't do anything without a user name ( -u ).  Quitting."
-		exit 99
+		if [ "$REMOTE_GIT_USER" != "" ]; then
+				remoteAccount="$REMOTE_GIT_USER"
+		else
+				echo "Can't do anything without a user name ( -u ).  Quitting."
+				exit 99
+		fi
 fi
 
 if [ "$useGithub" == "true" -a "$githubToken" == "" ]; then
@@ -136,9 +146,14 @@ if [ ! -d ".git" ]; then # no .git here?  This gets a little dicey, but let's al
 				projectType="Rails";
 		fi
 		if [ "$projectType" != "UNKNOWN" ]; then
+				projectGitignoreURL="$gitignoreBase/$projectType.gitignore"
+				echo "Looks like a(n) $projectType project.  Appending to .gitignore from:"
+				echo "    $projectGitignoreURL"
 				# Append, in case there was already a ".gitignore" file here.
 				# Yes, we might end up duplicating rules.  So what?
-				curl "$gitignorebase/$projectType.gitignore" >> .gitignore
+				curl "$projectGitignoreURL" >> .gitignore
+		else
+				echo "Not sure what kind of project this is, so not pulling any .gitignore file"
 		fi
 		
 		git init
