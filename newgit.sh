@@ -16,7 +16,24 @@
 # honors "REMOTE_GIT_USER" environment variable
 #remoteAccount='example'
 
-# the directory in which all the repos live
+# EXAMPLES:
+#
+#   newgit.sh -n mynewproject -g -T Node
+# Create a brand new project here called "mynewproject", and keep it at GitHub.  Initialize .gitignore for NodeJS
+#
+#   newgit.sh -i
+# I'm in a directory with existing code that I want to put under GIT version control
+# It will host the git repo on my private server (using REMOTE_GIT_SYSTEM and REMOTE_GIT_USER environment variables)
+# The project is auto-named the name of the current directory.
+# If it looks like a known project type, a .gitignore file will be created for it before committing anything.
+
+# TODO: support multiple project types for .gitignore initialization, both command-line and guessed
+# TODO: support naming the project as something other than the directory name (-n option coupled with -i)
+# TODO: massive code cleanup, sheesh
+# TODO: better documentation and example use-cases
+# TODO: use "git init <directory>" for plain "-n newprojectname" instead of manually creating it...  I didn't realize that was available
+
+# The directory in which all the repos live, if on a private server.
 remoteDir='git' # in this case, just "git/" in the login account's home dir
 
 ####
@@ -25,6 +42,42 @@ remoteDir='git' # in this case, just "git/" in the login account's home dir
 
 # a repo we can pull stuff from that is useful for initializing .gitignore files
 gitignoreBase="https://raw.github.com/github/gitignore/master"
+# $1 is the project type, $2 is a message.
+function pullGitignore() {
+  projectGitignoreURL="$gitignoreBase/$1.gitignore"
+  tmpGitignore="tmpGitignore$$"
+  curl --write-out "%{http_code}" --url "$projectGitignoreURL" --output $tmpGitignore.tmp --fail > $tmpGitignore.out 2> $tmpGitignore.err
+
+  if [ $? -ne 0 ]; then
+    echo "Was unable to retrieve .gitignore information from: $projectGitignoreURL"
+    echo "Perhaps '$1' is not a valid/known type in the list?"
+    echo -n "Response code was: "
+    cat $tmpGitignore.out
+    echo
+    echo -n "And curl said: "
+    cat $tmpGitignore.err
+    echo
+  else
+    echo "$2  Appending to .gitignore from:"
+    echo "    $projectGitignoreURL"
+    # Append, in case there was already a ".gitignore" file here.
+    # Yes, we might end up duplicating rules.  So what?
+    echo >> .gitignore
+    echo "#" >> .gitignore
+    echo "# START FROM: $projectGitignoreURL" >> .gitignore
+    echo "# RETRIEVED: `date --iso-8601=ns --reference=$tmpGitignore.tmp`" >> .gitignore
+    echo "#" >> .gitignore
+    cat $tmpGitignore.tmp >> .gitignore
+    echo >> .gitignore
+    echo "#" >> .gitignore
+    echo "# END FROM: $projectGitignoreURL" >> .gitignore
+    echo "# RETRIEVED: `date --iso-8601=ns --reference=$tmpGitignore.tmp`" >> .gitignore
+    echo "#" >> .gitignore
+  fi
+
+  # cleanup all the temp files we createde while CURLing
+  /bin/rm -f $tmpGitignore.tmp $tmpGitignore.out $tmpGitignore.err
+}
 
 while getopts "?hxign:s:d:u:p:T:t:" flag
 do
@@ -128,10 +181,15 @@ if [ "$newProjectName" != "" ]; then
     exit 66
   fi
 
+  if [ "$projectType" != "" ]; then
+    pullGitignore "$projectType" "You are starting a(n) $projectType project."
+  fi
+
+  echo "This is $newProjectName" > README
+
   git init
-  echo "First Post" > README
   git add .
-  git commit -m "Initial commit.  README only."
+  git commit -m "Initial commit."
 fi
 
 cwd=`pwd`
@@ -157,21 +215,22 @@ if [ ! -d ".git" ]; then # no .git here?  This gets a little dicey, but let's al
 
   # Not all that sure how to identify different kinds of projects.  But it seems worthwhile
   #   to at least try to have an appropriate .gitignore file
-  projectType="UNKNOWN";
   if [ -f "AndroidManifest.xml" ]; then
     projectType="Android";
   elif [ -f "Gemfile" ]; then # "config.ru" or "Rakefile" are probably just as reasonable
     projectType="Rails";
   fi
-  if [ "$projectType" != "UNKNOWN" ]; then
-    projectGitignoreURL="$gitignoreBase/$projectType.gitignore"
-    echo "Looks like a(n) $projectType project.  Appending to .gitignore from:"
-    echo "    $projectGitignoreURL"
-    # Append, in case there was already a ".gitignore" file here.
-    # Yes, we might end up duplicating rules.  So what?
-    curl "$projectGitignoreURL" >> .gitignore
+  if [ "$projectType" != "" ]; then
+    pullGitignore "$projectType" "Looks like a(n) $projectType project."
   else
     echo "Not sure what kind of project this is, so not pulling any .gitignore file"
+  fi
+
+  if [ `ls | wc -l` = 0 ]; then
+    # handle case where they've asked to initialize a totally empty directory...
+    # this is a dumb thing to do, but it's more confusing if we just ignore it.
+    echo "You asked me to initialize an entirely empty directory.  Creating a README file to unconfuse GIT."
+    echo "This is $projectName" > README
   fi
 
   git init
