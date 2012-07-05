@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # -x
 
 # newgit.sh [ -i ] [ -n <projectname> ] [ -g ] [ -t <githubtoken> ] [ -u <username> ] [ -p <password> ] [ -s <remote-git-system> ] [ -d <remote-git-dir> ] [ -T <project-type> ]
@@ -47,8 +47,8 @@ function pullGitignore() {
   projectGitignoreURL="$gitignoreBase/$1.gitignore"
   tmpGitignore="tmpGitignore$$"
   curl --write-out "%{http_code}" --url "$projectGitignoreURL" --output $tmpGitignore.tmp --fail > $tmpGitignore.out 2> $tmpGitignore.err
-
-  if [ $? -ne 0 ]; then
+  result=$?
+  if [ $result -ne 0 ]; then
     echo "Was unable to retrieve .gitignore information from: $projectGitignoreURL"
     echo "Perhaps '$1' is not a valid/known type in the list?"
     echo -n "Response code was: "
@@ -79,12 +79,13 @@ function pullGitignore() {
   /bin/rm -f $tmpGitignore.tmp $tmpGitignore.out $tmpGitignore.err
 }
 
-while getopts "?hxign:s:d:u:p:T:t:" flag
+while getopts "?hxiGHn:s:d:u:p:T:t:" flag
 do
 #  echo "$flag" $OPTIND $OPTARG
   case "$flag" in
     i)  initialize="true";;
-    g)  useGithub="true";;
+    G)  useGithub="true";;
+    H)  useHeroku="true";;
     n)  newProjectName="$OPTARG";;
     s)  remoteSystem="$OPTARG";;
     d)  remoteDir="$OPTARG";;
@@ -93,7 +94,7 @@ do
     T)  projectType="$OPTARG";;
     t)  githubToken="$OPTARG";;
     x)  set -x;;
-    [?h]) echo >&2 "Usage: $0 [ -?hx ] [ -i ] [ -n <projectname> ] [ -g ] [ -t <githubtoken> ] [ -u <username> ] [ -p <password> ] [ -s <remote-git-system> ] [ -d <remote-git-dir> ] [ -T <project-type> ]"
+    [?h]) echo >&2 "Usage: $0 [ -?hx ] [ -i ] [ -n <projectname> ] [ -H ] [ -G ] [ -t <githubtoken> ] [ -u <username> ] [ -p <password> ] [ -s <remote-git-system> ] [ -d <remote-git-dir> ] [ -T <project-type> ]"
       exit 1;;
   esac
 done
@@ -103,7 +104,7 @@ if [ "$remoteSystem" == "" -a "$useGithub" != "true" ]; then
   if [ "$REMOTE_GIT_SYSTEM" != "" ]; then
     remoteSystem="$REMOTE_GIT_SYSTEM"
   else
-    echo "Need either a remote system ( -s ) or to be told to use GitHub ( -g ).  Quitting."
+    echo "Need either a remote system ( -s ) or to be told to use GitHub ( -G ).  Quitting."
     exit 99
   fi
 fi
@@ -315,7 +316,7 @@ else # else we're not using GitHub, so we set this up on a private server somewh
 if [ ! -d '$remoteDir' ]; then
   echo '$remoteDir not found.  Creating...'
   mkdir -p '$remoteDir'
-  if [ $? ]; then
+  if [ $? -ne 0 ]; then
     echo 'Unable to mkdir -p $remoteDir.  This may not end well.'
     exit
   fi
@@ -346,3 +347,64 @@ git config master.merge refs/heads/master
 
 # and shovel it all out there
 git push -u origin master
+# TODO: learn what "-u" option really means and whether it should be used here
+
+# okay, let's also dump it out on Heroku if that was requested
+if [ "$useHeroku" == "true" ]; then
+  # in case we don't already have heroku
+  gem install heroku
+
+  tmpHeroku="tmpHeroku$$"
+  heroku apps:create $projectName > $tmpHeroku.out 2> $tmpHeroku.err
+  result=$?
+  if [ $result -ne 0 ]; then
+    echo "Failed to create Heroku app with name $projectName (returned: $result)"
+  else
+    echo "Successfully created Heroku app with name $projectName"
+  fi
+  echo "Here's what Heroku had to say:"
+  cat $tmpHeroku.out $tmpHeroku.err
+
+  # TODO: stop trying to create directly with the desired name
+  # TODO: instead, create with temporary name, then try to rename.  More gets done that way even if there's a name conflict.
+
+  # create ( heroku apps:create <NAME1> ) returns the following
+  # ON SUCCESS- 0
+  # OUT: Creating <NAME1>... done, stack is cedar
+  #      http://<NAME1>.herokuapp.com/ | git@heroku.com:<NAME1>.git
+  # ERR: <empty>
+  # ON FAILURE- 1 (when there is already an app with the name NAME1)
+  # OUT: <empty>
+  # ERR: !    Name is already taken
+
+  # create ( heroku apps:create ) (i.e. without a designated name) returns the following
+  # ON SUCCESS- 0
+  # OUT: Creating <NAME>... done, stack is cedar
+  #      http://<NAME>.herokuapp.com/ | git@heroku.com:<NAME>.git
+  # ERR: <empty>
+  # ON FAILURE...  Haven't yet found a failure mode
+  # OUT:
+  # ERR:
+
+  # rename ( heroku apps:rename <NAME2> --app <NAME1> ) returns the following
+  # ON SUCCESS- 0
+  # OUT: Renaming <NAME1> to <NAME2>... done
+  #      http://<NAME2>.herokuapp.com/ | git@heroku.com:<NAME2>.git
+  #      Don't forget to update your Git remotes on any local checkouts.
+  # ERR: <empty>
+  # ON FAILURE- 1 (when there is already an app with the name NAME2)
+  # OUT: Renaming <NAME1> to <NAME2>... failed
+  # ERR: !    is already taken
+  # ON FAILURE- 1 (when there is no app with the name NAME1)
+  # OUT: Renaming <NAME1> to <NAME2>... failed
+  # ERR: !    App not found.
+
+  /bin/rm -f $tmpHeroku.out $tmpHeroku.err
+
+  git push heroku master
+
+  heroku run rake db:setup
+  heroku ps
+
+  heroku logs
+fi
