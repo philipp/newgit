@@ -352,8 +352,11 @@ git push -u origin master
 # okay, let's also dump it out on Heroku if that was requested
 if [ "$useHeroku" == "true" ]; then
   # in case we don't already have heroku
+  echo "Installing heroku gem, in case it's not already here:"
   gem install heroku
+  echo "DONE Installing heroku gem."
 
+  echo "Creating a Heroku app named '$projectName':"
   tmpHeroku="tmpHeroku$$"
   heroku apps:create $projectName > $tmpHeroku.out 2> $tmpHeroku.err
   result=$?
@@ -364,6 +367,8 @@ if [ "$useHeroku" == "true" ]; then
   fi
   echo "Here's what Heroku had to say:"
   cat $tmpHeroku.out $tmpHeroku.err
+
+  echo "----- That's all Heroku had to say"
 
   # TODO: stop trying to create directly with the desired name
   # TODO: instead, create with temporary name, then try to rename.  More gets done that way even if there's a name conflict.
@@ -401,10 +406,24 @@ if [ "$useHeroku" == "true" ]; then
 
   /bin/rm -f $tmpHeroku.out $tmpHeroku.err
 
+  echo
+  echo "Pushing to Heroku..."
   git push heroku master
+  echo "DONE Pushing to Heroku."
 
+  echo
+  echo "Running 'rake db:setup' on Heroku..."
   heroku run rake db:setup
-  heroku ps
+  echo "DONE Running 'rake db:setup' on Heroku."
 
+  echo
+  echo "Running 'heroku ps'..."
+  heroku ps
+  echo "DONE Running 'heroku ps'..."
+
+  echo
+  echo "Running 'heroku logs'..."
   heroku logs
+  echo "DONE Running 'heroku logs'..."
+
 fi

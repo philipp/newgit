@@ -1,0 +1,69 @@
+Initialized empty Git repository in /home/philipp/winprojects/rails/androiddevicedata-9/.git/
+[master (root-commit) f71a29e] Initial commit.
+ Committer: Philipp Hanes <philipp@u1204s64.(none)>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 101 files changed, 2526 insertions(+)
+ create mode 100644 .gitignore
+ create mode 100644 .rvmrc
+
+============================
+
+Total 135 (delta 13), reused 0 (delta 0)
+To brainglo@brainglow.com:git/androiddevicedata-9.git
+ * [new branch]      master -> master
+Branch master set up to track remote branch master from origin.
+Fetching: excon-0.15.5.gem (100%)
+Fetching: heroku-api-0.3.2.gem (100%)
+Fetching: netrc-0.7.5.gem (100%)
+Fetching: rest-client-1.6.7.gem (100%)
+Fetching: launchy-2.1.2.gem (100%)
+Fetching: heroku-2.30.2.gem (100%)
+ !    Heroku recommends using the Heroku Toolbelt to install the CLI.
+ !    Download it from: https://toolbelt.heroku.com
+Successfully installed excon-0.15.5
+Successfully installed heroku-api-0.3.2
+Successfully installed netrc-0.7.5
+Successfully installed rest-client-1.6.7
+Successfully installed launchy-2.1.2
+Successfully installed heroku-2.30.2
+6 gems installed
+Successfully created Heroku app with name androiddevicedata-9
+Here's what Heroku had to say:
+
+=================================
+
+       Cleaning up the bundler cache.
+-----> Writing config/database.yml to read from DATABASE_URL
+-----> Preparing app for Rails asset pipeline
+       Running: rake assets:precompile
+       rake aborted!
+       could not connect to server: Connection refused
+       Is the server running on host "127.0.0.1" and accepting
+       TCP/IP connections on port 5432?
+       Tasks: TOP => environment
+       (See full trace by running task with --trace)
+       Precompiling assets failed, enabling runtime asset compilation
+       Injecting rails31_enable_runtime_asset_compilation
+       Please see this article for troubleshooting help:
+       http://devcenter.heroku.com/articles/rails31_heroku_cedar#troubleshooting
+-----> Rails plugin injection
+       Injecting rails_log_stdout
+       Injecting rails3_serve_static_assets
+-----> Discovering process types
+       Procfile declares types      -> (none)
+       Default types for Ruby/Rails -> console, rake, web, worker
+-----> Compiled slug size is 11.8MB
+-----> Launching... done, v4
+       http://androiddevicedata-9.herokuapp.com deployed to Heroku
+
+=================================
