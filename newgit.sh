@@ -46,7 +46,7 @@ gitignoreBase="https://raw.github.com/github/gitignore/master"
 function pullGitignore() {
   projectGitignoreURL="$gitignoreBase/$1.gitignore"
   tmpGitignore="tmpGitignore$$"
-  curl --write-out "%{http_code}" --url "$projectGitignoreURL" --output $tmpGitignore.tmp --fail > $tmpGitignore.out 2> $tmpGitignore.err
+  curl --location --write-out "%{http_code}" --url "$projectGitignoreURL" --output $tmpGitignore.tmp --fail > $tmpGitignore.out 2> $tmpGitignore.err
   result=$?
   if [ $result -ne 0 ]; then
     echo "Was unable to retrieve .gitignore information from: $projectGitignoreURL"
@@ -352,9 +352,9 @@ git push -u origin master
 # okay, let's also dump it out on Heroku if that was requested
 if [ "$useHeroku" == "true" ]; then
   # in case we don't already have heroku
-  echo "Installing heroku gem, in case it's not already here:"
-  gem install heroku
-  echo "DONE Installing heroku gem."
+#  echo "Installing heroku gem, in case it's not already here:"
+#  gem install heroku
+#  echo "DONE Installing heroku gem."
 
   echo "Creating a Heroku app named '$projectName':"
   tmpHeroku="tmpHeroku$$"
